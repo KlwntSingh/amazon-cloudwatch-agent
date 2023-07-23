@@ -1,0 +1,82 @@
+[agent]
+  collection_jitter = "0s"
+  debug = false
+  flush_interval = "1s"
+  flush_jitter = "0s"
+  hostname = ""
+  interval = "60s"
+  logfile = "C:\\ProgramData\\Amazon\\AmazonCloudWatchAgent\\Logs\\amazon-cloudwatch-agent.log"
+  logtarget = "lumberjack"
+  metric_batch_size = 1000
+  metric_buffer_limit = 10000
+  omit_hostname = false
+  precision = ""
+  quiet = false
+  round_interval = false
+
+[inputs]
+
+  [[inputs.win_perf_counters]]
+    DisableReplacer = true
+    interval = "60s"
+
+    [[inputs.win_perf_counters.object]]
+      Counters = ["% Free Space"]
+      Instances = ["*"]
+      Measurement = "LogicalDisk"
+      ObjectName = "LogicalDisk"
+      WarnOnMissing = true
+
+    [[inputs.win_perf_counters.object]]
+      Counters = ["% Committed Bytes In Use"]
+      Instances = ["------"]
+      Measurement = "Memory"
+      ObjectName = "Memory"
+      WarnOnMissing = true
+    [inputs.win_perf_counters.tags]
+      metricPath = "metrics"
+
+  [[inputs.k8sapiserver]]
+    interval = "60s"
+    node_name = "ip-192-168-70-123.us-west-2.compute.internal"
+    [inputs.k8sapiserver.tags]
+      metricPath = "logs_k8sapiserver"
+
+[outputs]
+
+  [[outputs.cloudwatch]]
+    force_flush_interval = "60s"
+    namespace = "CWAgent"
+    region = "us-west-2"
+    rollup_dimensions = [["InstanceId"]]
+    tagexclude = ["host", "metricPath"]
+    [outputs.cloudwatch.tagpass]
+      metricPath = ["metrics"]
+
+  [[outputs.cloudwatchlogs]]
+    force_flush_interval = "5s"
+    log_stream_name = "i-0e0a8d0417301513d"
+    region = "us-west-2"
+    tagexclude = ["metricPath"]
+    [outputs.cloudwatchlogs.tagpass]
+      metricPath = ["logs"]
+
+[processors]
+
+  [[processors.ec2tagger]]
+    ec2_instance_tag_keys = ["aws:autoscaling:groupName"]
+    ec2_metadata_tags = ["ImageId", "InstanceId", "InstanceType"]
+    refresh_interval_seconds = "0s"
+    [processors.ec2tagger.tagpass]
+      metricPath = ["metrics"]
+
+  [[processors.k8sdecorator]]
+    cluster_name = "kulwant-CI-2019"
+    disable_metric_extraction = false
+    host_ip = "192.168.70.123"
+    node_name = "ip-192-168-70-123.us-west-2.compute.internal"
+    order = 1
+    prefer_full_pod_name = false
+    tag_service = true
+    [processors.k8sdecorator.tagpass]
+      metricPath = ["logs", "logs_k8sapiserver"]
